@@ -83,4 +83,4 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 /[Aa]ssets/Firebase/*
 /[Aa]ssets/GeneratedLocalRepo/*
-
+/[Aa]ssets/._google-services.json
