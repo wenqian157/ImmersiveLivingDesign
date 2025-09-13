@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "479728111096",
+    "firebase_url": "https://idlworshop-default-rtdb.firebaseio.com",
+    "project_id": "idlworshop",
+    "storage_bucket": "idlworshop.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:479728111096:android:00db338d19447ee4839a0d",
+        "android_client_info": {
+          "package_name": "com.dbt.ild"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtNoD6p4tgaIgOsP0URIHFrdhNwBIyiO4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

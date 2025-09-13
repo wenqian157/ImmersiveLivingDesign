@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "353823697325",
+    "firebase_url": "https://ethidl-default-rtdb.firebaseio.com",
+    "project_id": "ethidl",
+    "storage_bucket": "ethidl.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:353823697325:android:3158b997d8b05795f69924",
+        "android_client_info": {
+          "package_name": "com.dbt.idl"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJwl63ZvB-vubPCS_1sPTPYAwSt85B4Ok"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
