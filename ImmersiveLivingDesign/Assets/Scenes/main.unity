@@ -178,7 +178,8 @@ MonoBehaviour:
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_fontSharedMaterials: []
+  m_fontSharedMaterials:
+  - {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
@@ -2494,10 +2495,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fbde39fdeebf741daa91243be8c9ff7b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  seeThrough: {fileID: 0}
   load: {fileID: 198499480510101921, guid: c348712bda248c246b8c49b3db54643f, type: 3}
   server: {fileID: 87328063}
   furniture: {fileID: 160924298}
-  ovrManager: {fileID: 620717534}
   passthroughLayer: {fileID: 620717533}
 --- !u!1001 &690303725
 PrefabInstance:

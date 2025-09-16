@@ -59,7 +59,7 @@ public class FirebaseServer : MonoBehaviour
             }
 
             string json = www.downloadHandler.text;
-            Logs.Instance.debug3D.text = json.Length.ToString();
+            //Logs.Instance.debug3D.text = json.Length.ToString();
             MeshData meshData = JsonConvert.DeserializeObject<MeshData>(json);
             Mesh mesh = ConvertToUnityMesh(meshData);
             parent.GetComponent<MeshFilter>().mesh = mesh;

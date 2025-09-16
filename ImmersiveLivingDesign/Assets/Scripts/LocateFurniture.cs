@@ -47,7 +47,7 @@ public class LocateFurniture : MonoBehaviour
 
             string json = www.downloadHandler.text;
             mocapDatalist = JsonConvert.DeserializeObject<List<MocapData>>(json);
-            Logs.Instance.debug3D.text =$"found {mocapDatalist.Count} furniture!";
+            //Logs.Instance.debug3D.text =$"found {mocapDatalist.Count} furniture!";
             AssignTransform();
         }
     }
