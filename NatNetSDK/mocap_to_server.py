@@ -20,7 +20,7 @@ from scipy.spatial.transform import Rotation as R
 import numpy as np
 
 # Where server.py is listening. Edit here or pass on the command line.
-SERVER_HOST = "10.3.14.89"   # IP of the PC running server.py (this one; check with ipconfig, Wi-Fi DHCP may change it)
+SERVER_HOST = "172.20.10.2"   # this PC on the phone hotspot (check with ipconfig if the phone hands out a new address)
 SERVER_PORT = 9001
 
 
