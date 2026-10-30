@@ -36,7 +36,7 @@ The project is built in **steps, not linearly** — each step is a self-containe
 - **Rendering (proposed 2026-10-30):** Unity 6 LTS + URP, Vulkan, Forward renderer (not Forward+/Deferred), Multiview (single-pass instanced), MSAA 4x, HDR off, post-processing off, Fixed Foveated Rendering on, IL2CPP ARM64, linear colour. _Awaiting confirmation._
 - **XR plugin / SDK (2026-10-30):** Build profile **Meta Quest** (Platform Browser), which installs the Unity OpenXR plugin; add **Unity OpenXR: Meta** (`com.unity.xr.meta-openxr`) for Quest features, XR Interaction Toolkit for controllers. Not Android XR (that is Google/Samsung). Meta XR Core SDK only if a Meta-only feature is needed.
 - **Wall openings (proposed 2026-10-30):** treat walls as planar: wall = 2D rectangle in its own plane, door/window = 2D rectangles subtracted from it, triangulate, extrude to thickness. Runs fast on Quest, no fragile 3D mesh CSG. Candidate libs: Clipper2 (C# port) for polygon clipping, LibTessDotNet / ear-clipping for triangulation. Fallback if real 3D CSG is ever needed: pb_CSG (Parabox, MIT, runtime). _Awaiting confirmation._
-- **Pose transport (2026-10-30):** UDP, one JSON datagram per frame: `{"frame","t","bodies":[{"id","name","pos":[x,y,z],"rot":[qx,qy,qz,qw]}]}`, default port 9000. `dummy.py` stands in for Motive until a real NatNet bridge exists.
+- **Data pipeline (2026-10-30):** Motive PC → `NatNetSDK/mocap_to_server.py` (NatNet client, converts each frame to JSON) → **UDP :9001** → `server.py` on the room-generation PC (prints for now; will later generate the room and forward to the Quest on UDP :9000, where `WallUdpReceiver.cs` listens). Frame = JSON list of `{"id","pos":[x,y,z],"rot":{"x","y","z" axes},"quaternion":[qx,qy,qz,qw]}`.
 - **Where generation runs:** _TBD — on the Quest directly, or on a PC (next to Motive) that streams poses/meshes to the headset._
 - **Space alignment:** _TBD — how OptiTrack world space is aligned with the Quest tracking space (e.g. rigid body on the headset)._
 
@@ -55,6 +55,7 @@ Information received, in order.
 - 2026-10-30 — Project is composed of steps, worked non-linearly. Step 1: VR project on Quest 3. Discussed render pipeline choice (see §5).
 - 2026-10-30 — Overall workflow: OptiTrack tracks dozens of rigid bodies; each ID is a room element; room is generated from their positions; walls/doors/windows need boolean geometry. Discussed doing it on Quest with custom scripts (see §5).
 - 2026-10-30 — Folders arrived: `IDL_Oculus` (Unity 6000.6.3f1, URP 17.6, no XR packages yet), `NatNetSDK`, `UR3D_sample`, `rigidbody_design`. Room is **7 m × 5.5 m**. Added `NatNetSDK/dummy.py` (3 dummy walls over UDP/JSON, port 9000) and `IDL_Oculus/Assets/Scripts/WallUdpReceiver.cs` (receives + logs). No boolean yet.
+- 2026-10-30 — Old files merged back (`NatNetSDK/` now holds the Python NatNet client directly; `old/` has `server.gh` + `.3dm` from the Grasshopper version; `planstyle.jpg`). `dummy.py` gone. Added UDP send to `mocap_to_server.py` and wrote root `server.py` (receive + print).
 
 ---
 
