@@ -65,7 +65,7 @@ def main():
     client.set_client_address(local_ip)
     client.set_use_multicast(multicast)
     client.pos_listener = make_listener(args.id)
-    client.set_print_level(0)
+    client.set_print_level(1)   # NatNetClient only calls the listener every "print level"-th frame; 0 = never
 
     print(f"rigid body {args.id} from Motive at {motive_ip} ({'Multicast' if multicast else 'Unicast'}) (Ctrl-C to stop)")
     if multicast:

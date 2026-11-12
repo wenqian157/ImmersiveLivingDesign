@@ -40,6 +40,7 @@ MOTIVE_CLIENT_IP = "127.0.0.1"   # local interface to receive on
 MOTIVE_MULTICAST = True          # must match Motive's "Transmission Type"
 
 MAX_DATAGRAM = 65507             # UDP payload limit; ~150 bodies fit comfortably
+MAX_SEND_RATE = 60.0             # frames per second passed on to master.py; Motive itself usually runs faster
 NO_DATA_HINT_AFTER = 5.0         # seconds without a frame from Motive before the checklist is printed
 
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -47,11 +48,16 @@ server_address = (SERVER_HOST, SERVER_PORT)
 frames_sent = 0
 last_report = time.time()
 last_frame = None       # time.time() of the last frame received from Motive
+last_sent = 0.0         # time.time() of the last frame passed on
 
 
 def receive_new_pos(rigid_body_list):
-    global last_frame
+    """Called by NatNetClient for every frame from Motive; passes on at most MAX_SEND_RATE of them."""
+    global last_frame, last_sent
     last_frame = time.time()
+    if last_frame - last_sent < 0.9 / MAX_SEND_RATE:    # 0.9: a frame arriving slightly early still goes out
+        return
+    last_sent = last_frame
     data = convert_data(rigid_body_list)
     send_to_server(data)
 
@@ -148,7 +154,7 @@ def main():
     client.set_client_address(local_ip)
     client.set_use_multicast(multicast)
     client.pos_listener = receive_new_pos
-    client.set_print_level(20)
+    client.set_print_level(1)   # NatNetClient only calls the listener every "print level"-th frame; 1 = every frame
 
     print(f"Motive at {motive_ip} ({transmission}) -> master at {server_address[0]}:{server_address[1]} (Ctrl-C to stop)")
     if multicast:
