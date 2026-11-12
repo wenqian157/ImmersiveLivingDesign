@@ -1,7 +1,7 @@
 """Dummy client: stands in for mocap_to_server.py when Motive is not available.
 
 Sends the same packets mocap_to_server.py sends (one JSON datagram per frame)
-for 14 rigid bodies, ids 0-13. Coordinates are in the mocap frame of the
+for 12 rigid bodies, ids 0-11. Coordinates are in the mocap frame of the
 physical room, in metres: X front (-1.3 to 4.2), Y up, Z right (-2 to 5).
 No Motive, scipy or numpy needed.
 
@@ -9,13 +9,16 @@ Ids 0-1 are the two inside walls: each drifts slowly around its own spot and
 slowly turns, like someone repositioning it by hand. A wall runs along its
 body X axis. Ids 2-3 are the doors, one riding on each inside wall; ids 4-5
 are the windows, by the outer walls. They sit a little off their wall and a
-little out of line with it, and slide slowly along it. Ids 6-12 are the
-furniture, which only shifts and turns a little.
+little out of line with it, and slide slowly along it. Ids 6-8, 10 and 11 are
+the furniture (bed1, table1, chair1, sofa1, table2), which only shifts and
+turns a little. The rigid bodies of the bed, the chair and the sofa are not at
+the middle of the piece (see FURNITURE).
 
-Id 13 is the headset on a person walking through the room at eye level
+Id 9 is the headset on a person walking through the room at eye level
 (1.6 m): they stand in the left room looking at window1, walk through door1
 and door2 into the back room, stand looking at window2, and walk back. The
-headset's X axis points where the person looks. The walk keeps real time
+person looks along the headset rigid body's +y: to the left of its X axis
+seen from above, the same way a chair or sofa faces. The walk keeps real time
 whatever --speed is.
 
 Usage:
@@ -36,7 +39,7 @@ SERVER_PORT = 9001
 
 X_MIN, X_MAX = -1.3, 4.2   # metres, front
 Z_MIN, Z_MAX = -2.0, 5.0   # metres, right
-NUM_BODIES = 14            # ids 0-13, same ids as components.json
+NUM_BODIES = 12            # ids 0-11, same ids as components.json
 HEIGHT = 1.0               # metres above the floor
 
 # The walls: home spot (mocap x, z), heading and how much they move.
@@ -63,18 +66,22 @@ BY_OUTER_WALL = {
 
 
 # Furniture: same fields as the walls, but it only shifts and turns a little.
+# x, z is the middle of the piece. "tracker" is where its rigid body sits, measured from the
+# middle in the piece's own plan axes (x along the body X axis, y to its left), the same as
+# "tracker" in components.json; the pose sent is the tracker's.
 FURNITURE = {
-    6:  {"x": -0.05, "z": -0.9, "yaw": 0.0,   "drift": 0.10, "swing": 5.0,  "period": 90.0},    # bed1, head to the back wall
+    6:  {"x": -0.05, "z": -0.9, "yaw": -90.0, "drift": 0.10, "swing": 5.0,  "period": 90.0,     # bed1, head to the back wall
+         "tracker": (-0.7, -0.9)},
     7:  {"x": 3.05,  "z": -0.5, "yaw": -90.0, "drift": 0.10, "swing": 6.0,  "period": 110.0},   # table1
-    8:  {"x": 2.5,   "z": -0.9, "yaw": -90.0, "drift": 0.08, "swing": 15.0, "period": 45.0},    # chair1, facing table1
-    9:  {"x": 3.65,  "z": -0.1, "yaw": 90.0,  "drift": 0.08, "swing": 15.0, "period": 55.0},    # chair2, facing table1
-    10: {"x": 1.15,  "z": -1.6, "yaw": 0.0,   "drift": 0.10, "swing": 0.0,  "period": 70.0},    # lamp1
-    11: {"x": -0.55, "z": 3.4,  "yaw": -90.0, "drift": 0.10, "swing": 5.0,  "period": 100.0},   # sofa1, back to the back wall
-    12: {"x": 0.45,  "z": 3.4,  "yaw": -90.0, "drift": 0.12, "swing": 10.0, "period": 65.0},    # table2, in front of sofa1
+    8:  {"x": 2.5,   "z": -0.9, "yaw": -90.0, "drift": 0.08, "swing": 15.0, "period": 45.0,     # chair1, facing table1 (a chair faces its +y)
+         "tracker": (-0.3, -0.3)},
+    10: {"x": -0.55, "z": 3.4,  "yaw": -90.0, "drift": 0.10, "swing": 5.0,  "period": 100.0,    # sofa1, back to the back wall
+         "tracker": (-0.8, -0.33)},
+    11: {"x": 0.45,  "z": 3.4,  "yaw": -90.0, "drift": 0.12, "swing": 10.0, "period": 65.0},    # table2, in front of sofa1
 }
 
 # The headset: a person walking between two viewpoints.
-HEADSET_ID = 13
+HEADSET_ID = 9
 EYE_HEIGHT = 1.6    # metres
 LOOK_TIME = 6.0     # seconds standing at a viewpoint, looking at a window
 WALK_TIME = 12.0    # seconds walking from one viewpoint to the other
@@ -156,7 +163,7 @@ def pose(body_id, t, walk_t=None):
         yaws = []
         for k in range(-6, 7):
             _, (dx, dz) = person(t, walk_t + k * TURN_TIME / 6)
-            yaw = math.atan2(-dz, dx)                       # body X axis = (cos yaw, -sin yaw) in (x, z)
+            yaw = math.atan2(-dx, -dz)                      # the body's y axis, (-sin yaw, -cos yaw) in (x, z), looks ahead
             if yaws:                                        # keep each angle within half a turn of the one before
                 yaw += 2 * math.pi * round((yaws[-1] - yaw) / (2 * math.pi))
             yaws.append(yaw)
@@ -167,6 +174,10 @@ def pose(body_id, t, walk_t=None):
         x = w["x"] + w["drift"] * math.sin(phase)
         z = w["z"] + w["drift"] * math.cos(phase / 1.3)
         yaw = math.radians(w["yaw"] + w["swing"] * math.sin(phase / 0.8))
+        if "tracker" in w:      # the rigid body is not at the middle of the piece
+            c, s = math.cos(yaw), math.sin(yaw)     # piece x axis = (c, -s) in (x, z), its y axis = (-s, -c)
+            tx, ty = w["tracker"]
+            x, z = x + tx * c - ty * s, z - tx * s - ty * c
         return x, HEIGHT, z, yaw
     if body_id in ON_WALL:
         o = ON_WALL[body_id]
