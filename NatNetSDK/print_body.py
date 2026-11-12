@@ -10,12 +10,20 @@ Usage:
 
 Motive has to stream the same way as for mocap_to_server.py (see the top of that file).
 
-Printed, in Motive's own frame (X front, Y up, Z right), metres:
-    pos    x y z
-    quat   qx qy qz qw
-    euler  rotation about X, Y, Z in degrees (applied in that order about the fixed axes)
+Printed, in the room frame (X right, Y front, Z up, origin at the room centre on the floor),
+the same remapping master.py does:
+    x y z   position in metres
+    angle   direction of the body's X axis in the plan, in degrees from the room's X axis,
+            counter-clockwise seen from above (-180..180). 0 = along room X (to the right),
+            90 = along room Y (to the front). For a body lying flat on the floor.
+
+The room centre in Motive's coordinates is "mocap_center" in ../components.json if that file
+is there, otherwise MOCAP_CENTER below.
 """
 import argparse
+import json
+import math
+import os
 import threading
 import time
 
@@ -23,6 +31,9 @@ from scipy.spatial.transform import Rotation as R
 
 from NatNetClient import NatNetClient
 from mocap_to_server import MOTIVE_CLIENT_IP, MOTIVE_SERVER_IP, data_port_error
+
+MOCAP_CENTER = [1.45, 0.0, 1.5]     # keep the same as "mocap_center" in components.json
+CONFIG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "components.json")
 
 lock = threading.Lock()
 latest = {"time": None, "body": None, "ids": []}    # the newest frame, written by NatNet's thread
@@ -38,14 +49,31 @@ def make_listener(body_id):
     return receive
 
 
-def line(body):
-    x, y, z = body.pos
-    qx, qy, qz, qw = body.rot
-    rx, ry, rz = R.from_quat(body.rot).as_euler("xyz", degrees=True)
+def mocap_center():
+    """Room centre in Motive's coordinates and where it was read from."""
+    try:
+        with open(CONFIG, encoding="utf-8") as f:
+            return json.load(f)["mocap_center"], "components.json"
+    except (OSError, ValueError, KeyError):
+        return MOCAP_CENTER, "print_body.py"
+
+
+def room_pose(pos, quaternion, center):
+    """Motive pose (X front, Y up, Z right) -> room x, y, z and the plan angle of the body's X axis."""
+    x = pos[2] - center[2]      # room X = mocap Z
+    y = pos[0] - center[0]      # room Y = mocap X
+    z = pos[1] - center[1]      # room Z = mocap Y
+    axis = R.from_quat(quaternion).as_matrix()[:, 0]    # the body's X axis, in Motive's frame
+    if math.hypot(axis[2], axis[0]) < 0.2:      # pointing almost straight up or down
+        return x, y, z, None
+    return x, y, z, math.degrees(math.atan2(axis[0], axis[2]))
+
+
+def line(body, center):
+    x, y, z, angle = room_pose(body.pos, body.rot, center)
+    angle = "  (X axis is vertical)" if angle is None else f"{angle:7.1f} deg"
     tracked = "" if body.tracking_valid else "   NOT TRACKED (last known pose)"
-    return (f"id {body.id_num:2d}   pos {x:7.3f} {y:7.3f} {z:7.3f}"
-            f"   quat {qx:6.3f} {qy:6.3f} {qz:6.3f} {qw:6.3f}"
-            f"   euler {rx:7.1f} {ry:7.1f} {rz:7.1f}{tracked}")
+    return f"id {body.id_num:2d}   x {x:7.3f}   y {y:7.3f}   z {z:7.3f}   angle {angle}{tracked}"
 
 
 def main():
@@ -67,7 +95,10 @@ def main():
     client.pos_listener = make_listener(args.id)
     client.set_print_level(1)   # NatNetClient only calls the listener every "print level"-th frame; 0 = never
 
+    center, center_from = mocap_center()
     print(f"rigid body {args.id} from Motive at {motive_ip} ({'Multicast' if multicast else 'Unicast'}) (Ctrl-C to stop)")
+    print(f"room frame: metres from the room centre, which is at Motive {center} (from {center_from});"
+          " angle of the body's X axis from room X")
     if multicast:
         error = data_port_error(local_ip, client.data_port)
         if error is not None:
@@ -88,7 +119,7 @@ def main():
             with lock:
                 seen, body, ids = latest["time"], latest["body"], latest["ids"]
             if seen is not None and now - seen < 1.0 and body is not None:
-                print(line(body))
+                print(line(body, center))
             elif now - last_notice >= 2.0 and now - started >= 2.0:     # at most one notice every 2 s
                 last_notice = now
                 if seen is None or now - seen >= 1.0:
