@@ -1,7 +1,7 @@
 """Dummy client: stands in for mocap_to_server.py when Motive is not available.
 
 Sends the same packets mocap_to_server.py sends (one JSON datagram per frame)
-for 12 rigid bodies, ids 0-11. Coordinates are in the mocap frame of the
+for 13 rigid bodies, ids 0-12. Coordinates are in the mocap frame of the
 physical room, in metres: X front (-1.3 to 4.2), Y up, Z right (-2 to 5).
 No Motive, scipy or numpy needed.
 
@@ -9,8 +9,8 @@ Ids 0-1 are the two inside walls: each drifts slowly around its own spot and
 slowly turns, like someone repositioning it by hand. A wall runs along its
 body X axis. Ids 2-3 are the doors, one riding on each inside wall; ids 4-5
 are the windows, by the outer walls. They sit a little off their wall and a
-little out of line with it, and slide slowly along it. Ids 6-8, 10 and 11 are
-the furniture (bed1, table1, chair1, sofa1, table2), which only shifts and
+little out of line with it, and slide slowly along it. Ids 6-8 and 10-12
+are the furniture (bed1, table1, chair1, sofa1, table2, lamp1), which only shifts and
 turns a little. The rigid bodies of the bed, the chair and the sofa are not at
 the middle of the piece (see FURNITURE).
 
@@ -31,6 +31,7 @@ Usage:
 import argparse
 import json
 import math
+import os
 import socket
 import time
 
@@ -39,7 +40,7 @@ SERVER_PORT = 9001
 
 X_MIN, X_MAX = -1.3, 4.2   # metres, front
 Z_MIN, Z_MAX = -2.0, 5.0   # metres, right
-NUM_BODIES = 12            # ids 0-11, same ids as components.json
+NUM_BODIES = 13            # ids 0-12, same ids as components.json
 HEIGHT = 1.0               # metres above the floor
 
 # The walls: home spot (mocap x, z), heading and how much they move.
@@ -78,6 +79,8 @@ FURNITURE = {
     10: {"x": -0.55, "z": 3.4,  "yaw": -90.0, "drift": 0.10, "swing": 5.0,  "period": 100.0,    # sofa1, back to the back wall
          "tracker": (-0.8, -0.33)},
     11: {"x": 0.45,  "z": 3.4,  "yaw": -90.0, "drift": 0.12, "swing": 10.0, "period": 65.0},    # table2, in front of sofa1
+    12: {"x": 0.05,  "z": 4.5,  "yaw": 0.0,   "drift": 0.25, "swing": 20.0, "period": 40.0,     # lamp1, beside the sofa; moves and turns a little more so it can be seen following
+         "tracker": (0.0, -0.2)},
 }
 
 # The headset: a person walking between two viewpoints.
@@ -86,6 +89,25 @@ EYE_HEIGHT = 1.6    # metres
 LOOK_TIME = 6.0     # seconds standing at a viewpoint, looking at a window
 WALK_TIME = 12.0    # seconds walking from one viewpoint to the other
 TURN_TIME = 0.8     # seconds over which the head's turning is smoothed, each way
+
+
+def headset_mount_turn():
+    """Degrees the headset's rigid body is turned to the right of where the person looks.
+
+    Read from "tracker_turn" of the headset in ../components.json, so that the dummy's rigid body sits on its
+    headset the way the real one does and the master's correction brings the person's view back. 0 if the
+    file is not there (e.g. on the Motive PC).
+    """
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "components.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            entry = json.load(f)["components"].get(str(HEADSET_ID), {})
+        return float(entry.get("tracker_turn") or 0.0)
+    except (OSError, ValueError, KeyError):
+        return 0.0
+
+
+MOUNT_TURN = headset_mount_turn()
 
 
 def walk_route(t):
@@ -167,7 +189,8 @@ def pose(body_id, t, walk_t=None):
             if yaws:                                        # keep each angle within half a turn of the one before
                 yaw += 2 * math.pi * round((yaws[-1] - yaw) / (2 * math.pi))
             yaws.append(yaw)
-        return x, EYE_HEIGHT, z, sum(yaws) / len(yaws)
+        # yaw grows to the left (anticlockwise seen from above), so a body mounted turned to the right has less of it
+        return x, EYE_HEIGHT, z, sum(yaws) / len(yaws) - math.radians(MOUNT_TURN)
     if body_id in WALLS or body_id in FURNITURE:
         w = WALLS.get(body_id) or FURNITURE[body_id]
         phase = 2 * math.pi * t / w["period"] + body_id

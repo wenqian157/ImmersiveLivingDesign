@@ -19,7 +19,7 @@ Motive (Settings > Streaming) has to match:
 
 Packet (JSON list):
     [{"id": 1, "pos": [x, y, z], "rot": {"x": [...], "y": [...], "z": [...]},
-      "quaternion": [qx, qy, qz, qw]}, ...]
+      "quaternion": [qx, qy, qz, qw], "tracked": true}, ...]
 """
 from NatNetClient import NatNetClient
 import argparse
@@ -95,7 +95,8 @@ def convert_data(rigid_body_list):
                 "y": y.tolist(),
                 "z": z.tolist()
             },
-            "quaternion": list(rd.rot)
+            "quaternion": list(rd.rot),
+            "tracked": bool(rd.tracking_valid)      # False: Motive cannot see it now, the pose is an old or empty one
         })
     return data
 
